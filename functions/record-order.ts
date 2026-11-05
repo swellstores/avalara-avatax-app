@@ -36,7 +36,8 @@ export default async function (req: SwellRequest) {
   const settings = await loadSettings(req.swell);
   if (!settings?.record_sales) return;
   // after the merchant picks another tax service, orders are taxed by it, so they aren't recorded here
-  if (!(await isTaxService(req.swell))) return { outcome: 'not the tax service' };
+  const taxSettings = await req.swell.get('/settings/taxes');
+  if (!isTaxService(taxSettings)) return { outcome: 'not the tax service' };
 
-  return { outcome: await syncSale(req.swell, settings, model, id) };
+  return { outcome: await syncSale(req.swell, settings, model, id, taxSettings) };
 }

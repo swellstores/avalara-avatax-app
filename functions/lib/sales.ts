@@ -56,11 +56,13 @@ function isCanceled(record: any): boolean {
 // Bring AvaTax up to date with a paid order or invoice: record it as a committed sale with the record's number as
 // the document code (AvaTax updates the document when the code is already there), or void it when it's canceled.
 // Unpaid records aren't recorded. Temporary AvaTax errors are thrown so the event is retried; others are logged.
+// taxSettings is /settings/taxes when the caller has already loaded it.
 export async function syncSale(
   swell: SwellClient,
   settings: AvaTaxSettings,
   model: SalesModel,
   id: string,
+  taxSettings?: any,
 ): Promise<SaleOutcome> {
   // reload: the event can arrive after later changes
   const record = await swell.get(`/${model}/${id}`, {
@@ -85,7 +87,7 @@ export async function syncSale(
         : record;
 
     const [locations, account, items] = await Promise.all([
-      loadLocations(swell),
+      loadLocations(swell, taxSettings),
       loadAccount(swell, sale),
       withProducts(swell, Array.isArray(sale.items) ? sale.items : []),
     ]);

@@ -198,6 +198,8 @@ describe("record-order", () => {
     const { req, swell } = request(event("order.updated"));
     expect(await recordOrder(req)).toEqual({ outcome: "recorded" });
     expect(swell.get).toHaveBeenCalledWith(`/orders/${ORDER_ID}`, { expand: ["items.product", "account"] });
+    // the tax service check and the ship-to setting share one read of Settings → Taxes
+    expect(swell.get.mock.calls.filter(([path]: any[]) => path === "/settings/taxes")).toHaveLength(1);
     const [model] = sentTransactions(fetchMock);
     expect(model).toMatchObject({
       code: "1042",

@@ -1,5 +1,8 @@
 export const APP_ID = 'avatax';
 
+// id of the tax extension in swell.json; Settings → Taxes saves it as extension_config_id
+export const EXTENSION_ID = 'avatax';
+
 // AvaTax REST API v2 hosts, chosen by the Environment setting
 export const API_HOSTS = {
   sandbox: 'https://sandbox-rest.avatax.com/api/v2',

@@ -129,7 +129,8 @@ An invoice without its own addresses uses its subscription's shipping and billin
 has no usable address is recorded from the store's `default` shipping location; without that location it isn't recorded
 (`AvaTax: <model> <code> not recorded: no customer address and no default shipping location` is logged).
 
-Network errors, 429 and 5xx are thrown, so Swell runs the event again (safe: the same code updates the same document).
+Network errors, 429 and 5xx are thrown, so the call ends as failed and the event can be delivered again (safe: the
+same code updates the same document).
 Other AvaTax errors (for example a locked document AvaTax has already filed) are logged as
 `AvaTax: <model> <code> not recorded: …` and not retried.
 
@@ -210,8 +211,9 @@ Tax codes are trimmed and uppercased. **Actions**: **Test connection**.
 - **Tax-exempt guests.** Guests can't have an entity use code; use certificates in Avalara keyed by their email.
 - **Orders created directly through the API** (not drafts, not converted from a cart) may be saved without a tax
   calculation; drafts and carts converted to orders are calculated.
-- **Calls per calculation.** Each recalculation makes up to 4 Swell calls (locations, tax settings, customer, products)
-  and one AvaTax call; each recorded sale reloads the record and makes the same calls.
+- **Calls per calculation.** Each recalculation makes up to 5 Swell calls (app settings, locations, tax settings,
+  customer, products) and one AvaTax call. Each recorded sale reloads the record and reads the tax settings once, for
+  both the tax service check and the address setting.
 
 ## Development
 

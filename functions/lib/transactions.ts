@@ -2,6 +2,7 @@ import {
   ALREADY_VOIDED,
   APP_ID,
   AvaTaxError,
+  EXTENSION_ID,
   NOT_FOUND,
   avataxRequest,
   type AvaTaxSettings,
@@ -331,11 +332,15 @@ export async function voidTransaction(settings: AvaTaxSettings, code: string): P
   }
 }
 
-// Swell shipping locations and the address Settings → Taxes calculates with
-export async function loadLocations(swell: SwellClient): Promise<Pick<TaxContext, 'locations' | 'locationSource'>> {
+// Swell shipping locations and the address Settings → Taxes calculates with;
+// taxSettings is /settings/taxes when the caller has already loaded it
+export async function loadLocations(
+  swell: SwellClient,
+  taxSettings?: any,
+): Promise<Pick<TaxContext, 'locations' | 'locationSource'>> {
   const [locations, taxes] = await Promise.all([
     swell.get('/settings/shipments/locations'),
-    swell.get('/settings/taxes'),
+    taxSettings !== undefined ? taxSettings : swell.get('/settings/taxes'),
   ]);
   const list = Array.isArray(locations) ? locations : Array.isArray(locations?.results) ? locations.results : [];
   const map = new Map<string, any>();
@@ -345,11 +350,10 @@ export async function loadLocations(swell: SwellClient): Promise<Pick<TaxContext
   return { locations: map, locationSource: taxes?.location_source || undefined };
 }
 
-// true while Settings → Taxes uses this app's tax extension (extension_config_id is the extension id in swell.json;
-// extension_app_id is the app's record id, which functions don't get, so only its presence is checked)
-export async function isTaxService(swell: SwellClient): Promise<boolean> {
-  const taxes = await swell.get('/settings/taxes');
-  return Boolean(taxes?.extension_app_id) && taxes?.extension_config_id === 'avatax';
+// true while Settings → Taxes (/settings/taxes) uses this app's tax extension (extension_config_id is the extension id
+// in swell.json; extension_app_id is the app's record id, which functions don't get, so only its presence is checked)
+export function isTaxService(taxSettings: any): boolean {
+  return Boolean(taxSettings?.extension_app_id) && taxSettings?.extension_config_id === EXTENSION_ID;
 }
 
 // the record's customer with the app's exemption fields; null for guests
