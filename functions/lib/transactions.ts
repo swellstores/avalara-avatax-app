@@ -345,6 +345,13 @@ export async function loadLocations(swell: SwellClient): Promise<Pick<TaxContext
   return { locations: map, locationSource: taxes?.location_source || undefined };
 }
 
+// true while Settings → Taxes uses this app's tax extension (extension_config_id is the extension id in swell.json;
+// extension_app_id is the app's record id, which functions don't get, so only its presence is checked)
+export async function isTaxService(swell: SwellClient): Promise<boolean> {
+  const taxes = await swell.get('/settings/taxes');
+  return Boolean(taxes?.extension_app_id) && taxes?.extension_config_id === 'avatax';
+}
+
 // the record's customer with the app's exemption fields; null for guests
 export async function loadAccount(swell: SwellClient, record: any): Promise<any> {
   if (record?.account?.id && record.account.$app !== undefined) return record.account;

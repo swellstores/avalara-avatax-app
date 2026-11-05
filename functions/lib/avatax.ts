@@ -26,7 +26,6 @@ export interface AvaTaxSettings {
   account_id: string;
   license_key: string;
   company_code: string;
-  enabled: boolean;
   block_on_failure: boolean;
   product_tax_code: string;
   shipping_tax_code: string;
@@ -75,7 +74,6 @@ export function getSettings(all: any): AvaTaxSettings {
     account_id: text(raw.account_id),
     license_key: text(raw.license_key),
     company_code: text(raw.company_code),
-    enabled: flag(raw.enabled, true),
     block_on_failure: flag(raw.block_on_failure, false),
     product_tax_code: text(raw.product_tax_code).toUpperCase() || DEFAULT_PRODUCT_TAX_CODE,
     shipping_tax_code: text(raw.shipping_tax_code).toUpperCase() || DEFAULT_SHIPPING_TAX_CODE,
@@ -92,12 +90,9 @@ export function missingSettings(settings: AvaTaxSettings): string[] {
   return missing;
 }
 
-// load settings and check the app can call AvaTax; null when it's turned off or not set up
+// load settings and check the app can call AvaTax; null when it's not set up
 export async function loadSettings(swell: Pick<SwellClient, 'settings'>): Promise<AvaTaxSettings | null> {
   const settings = getSettings(await swell.settings());
-  if (!settings.enabled) {
-    return null;
-  }
   const missing = missingSettings(settings);
   if (missing.length) {
     console.error(`AvaTax: missing ${missing.join(', ')} in app settings`);

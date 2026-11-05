@@ -123,12 +123,15 @@ export function sentTransactions(fetchMock: { mock: { calls: any[][] } }) {
     .map((call) => call.body.createTransactionModel);
 }
 
+// Settings → Taxes with AvaTax selected as the tax service
+export const taxSettings = { location_source: "shipping", extension_app_id: "6ae86ec397c0040013ebfcf4", extension_config_id: "avatax" };
+
 // Swell client mock: answers get by path
 export function makeSwell(records: Record<string, any> = {}, settings: any = rawSettings) {
   return {
     get: vi.fn(async (path: string, query?: any) => {
       if (path === "/settings/shipments/locations") return "locations" in records ? records.locations : locations;
-      if (path === "/settings/taxes") return "taxes" in records ? records.taxes : { location_source: "shipping" };
+      if (path === "/settings/taxes") return "taxes" in records ? records.taxes : taxSettings;
       if (path === "/products") {
         const ids: string[] = query?.where?.id?.$in || [];
         const products = "products" in records ? records.products : [makeProduct()];

@@ -10,7 +10,7 @@ function fail(message: string): never {
   throw new SwellError(message, { status: 400 });
 }
 
-// works while the app is turned off, so the credentials can be checked before turning it on
+// works before AvaTax is selected in Settings → Taxes, so the credentials can be checked first
 export default async function (req: SwellRequest) {
   const settings = getSettings(await req.swell.settings());
 
@@ -47,9 +47,6 @@ export default async function (req: SwellRequest) {
   const notes = [`Connected to AvaTax (${environment}), company ${company.name || settings.company_code}.`];
   if (!settings.record_sales) {
     notes.push('Recording sales is off, so paid orders are not sent to AvaTax for filing.');
-  }
-  if (!settings.enabled) {
-    notes.push('The app is turned off, so taxes are not calculated until you turn it on.');
   }
   return { message: notes.join(' ') };
 }

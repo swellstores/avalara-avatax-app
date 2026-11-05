@@ -28,8 +28,8 @@ the change being saved and the saved record (`$record`); the app combines them i
 
 It calculates nothing and returns no taxes when:
 
-- **Enabled** is off, or the account ID, license key or company code is missing (the hook returns before loading
-  anything; a missing credential is logged);
+- the account ID, license key or company code is missing (the hook returns before loading anything and logs what's
+  missing);
 - the record has `taxes_fixed`;
 - neither the shipping nor the billing address has a zip code, or a street, city and state;
 - there are no items, no subscription plan item and no shipping service.
@@ -106,7 +106,9 @@ Any failure while calculating (AvaTax refuses the transaction, can't be reached,
 with only the order id and payment id, not as an `order.updated` that changes `paid`, so those events are needed.
 `*.updated` is handled only when the change (`$event.data`) touches `paid`, `canceled`, `void`, `items`, `shipping`,
 `billing`, `shipment_total`, `shipment_rating`, `return_credit_total`, `account_id`, `currency` or `taxes_fixed`. With
-**Enabled** or **Record paid orders in AvaTax** off, or a credential missing, it returns before loading the record.
+**Record paid orders in AvaTax** off, or a credential missing, it returns before loading the record. It also records
+nothing while another tax service is selected in **Settings → Taxes** (`extension_config_id` isn't `avatax`), since
+those orders were taxed by that service.
 
 The order or invoice is loaded again (with `items.product` and `account`, and `subscription` for invoices), then:
 
@@ -148,19 +150,16 @@ recording, so exemption certificates saved in Avalara for that email apply too.
 
 The **Test connection** action calls `GET /utilities/ping` and checks `authenticated`, then looks up the company code
 (`GET /companies?$filter=companyCode eq '<code>'`) and checks it's active. It answers "Connected to AvaTax (Sandbox),
-company <name>." and notes when recording sales is off or the app is turned off. It works while **Enabled** is off and
+company <name>." and notes when recording sales is off. It works before AvaTax is selected in **Settings → Taxes** and
 sends no store data. Missing credentials, wrong credentials, an unknown or inactive company and AvaTax errors show as a
 red error popup (a `SwellError` with status 400); only temporary errors say "try again".
 
 ### Turning the app off
 
-With **Enabled** off:
-
-- the tax hook returns no taxes, so carts and orders get no tax. Swell's own tax rules don't run either while AvaTax is
-  the selected tax service; to use them, turn AvaTax off in **Settings → Taxes**;
-- order and invoice events return before loading any record, so nothing is recorded or voided in AvaTax.
-
-**Test connection** still works, so you can check the credentials before turning the app on.
+The app has no Enabled setting. Tax calculation runs only while AvaTax is the selected tax service in **Settings →
+Taxes**; choose another service there to use Swell's own tax rules. That also stops recording sales, and orders
+canceled after the switch aren't voided in AvaTax (void them in AvaTax). To stop only recording, turn off **Record paid
+orders in AvaTax**.
 
 ## Settings
 
@@ -173,7 +172,6 @@ code.
 | Account ID | yes | | AvaTax → Settings → License and API keys. |
 | License key | yes | | Generated on the same page. Stored as a secret. |
 | Company code | yes | | AvaTax → Settings → Manage companies. |
-| Enabled | no | on | Turns off tax calculation and recording without uninstalling the app. |
 | **Tax calculation** | | | |
 | Reject when AvaTax fails | no | off | Rejects the cart or order change when AvaTax can't calculate, instead of saving it without tax. |
 | Default product tax code | no | `P0000000` | For products without a tax code. |

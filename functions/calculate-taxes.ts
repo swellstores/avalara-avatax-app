@@ -32,7 +32,7 @@ function currentRecord(data: Record<string, any>): Record<string, any> {
 }
 
 // Runs whenever Swell recalculates taxes of a cart, order, subscription or invoice.
-// Returns nothing (no tax) when the app is off, not set up, or the customer has no address yet.
+// Returns nothing (no tax) when the app is not set up, or the customer has no address yet.
 export default async function (req: SwellRequest) {
   const settings = await loadSettings(req.swell);
   if (!settings) return;

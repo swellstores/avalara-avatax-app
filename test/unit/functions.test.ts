@@ -36,7 +36,7 @@ function request(data: Record<string, any>, records: Record<string, any> = {}, s
   return { req, swell };
 }
 
-const off = { ...rawSettings, enabled: false };
+const unset = { ...rawSettings, license_key: "" };
 
 describe("calculate-taxes", () => {
   // like Swell: the change being saved, with the saved record in $record
@@ -124,7 +124,7 @@ describe("calculate-taxes", () => {
   });
 
   it.each([
-    ["the app is off", hook(), off],
+    ["the app is not set up", hook(), unset],
     ["credentials are missing", hook(), { ...rawSettings, account_id: "" }],
     ["taxes are fixed", hook(makeCart({ taxes_fixed: true })), rawSettings],
     ["the customer has no address", hook(makeCart({ shipping: { country: "US" }, billing: {} })), rawSettings],
@@ -185,6 +185,14 @@ describe("record-order", () => {
     ]);
   });
 
+  it("records nothing while another tax service is selected", async () => {
+    const fetchMock = mockAvaTax();
+    const { req, swell } = request(event("order.paid"), { taxes: { location_source: "shipping" } });
+    expect(await recordOrder(req)).toEqual({ outcome: "not the tax service" });
+    expect(swell.get).not.toHaveBeenCalledWith(`/orders/${ORDER_ID}`, expect.anything());
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("records a paid order as a committed sales invoice", async () => {
     const fetchMock = mockAvaTax();
     const { req, swell } = request(event("order.updated"));
@@ -227,7 +235,7 @@ describe("record-order", () => {
   });
 
   it.each([
-    ["the app is off", off],
+    ["the app is not set up", unset],
     ["recording is off", { ...rawSettings, record_sales: false }],
     ["credentials are missing", { ...rawSettings, license_key: "" }],
   ])("does nothing when %s", async (_name, settings) => {
@@ -325,12 +333,11 @@ describe("test-connection", () => {
     expect(decodeURIComponent(companies.url)).toContain("$filter=companyCode eq 'SWELL'");
   });
 
-  it("works while the app is off and says so", async () => {
+  it("says when recording sales is off", async () => {
     mockAvaTax();
-    const { req } = request({}, {}, { ...off, record_sales: false });
+    const { req } = request({}, {}, { ...rawSettings, record_sales: false });
     const { message } = (await testConnection(req)) as any;
     expect(message).toContain("Recording sales is off");
-    expect(message).toContain("The app is turned off");
   });
 
   it("asks for missing credentials without calling AvaTax", async () => {

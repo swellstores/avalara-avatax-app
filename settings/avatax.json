@@ -58,14 +58,6 @@
       "description": "AvaTax → Settings → Manage companies"
     },
     {
-      "id": "enabled",
-      "label": "Enabled",
-      "type": "boolean",
-      "ui": "toggle",
-      "default": true,
-      "description": "When off, the app calculates no taxes and records nothing in AvaTax. To use Swell's own tax rules instead, turn AvaTax off in Settings → Taxes."
-    },
-    {
       "type": "field_group",
       "label": "Tax calculation",
       "description": "Taxes are calculated for carts, orders, subscriptions and invoices once the customer has entered an address with a zip code, or a street, city and state.",

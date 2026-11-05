@@ -1,4 +1,19 @@
-import { SwellError } from "@swell/apps-sdk";
+class SwellErrorImpl extends Error {
+  status: number;
+  body?: unknown;
+
+  constructor(message: string | object, options: { status?: number } = {}) {
+    const text =
+      typeof message === "string"
+        ? message
+        : JSON.stringify(message, null, 2);
+
+    super(text);
+    this.name = "SwellError";
+    this.status = options.status ?? 500;
+    this.body = typeof message === "string" ? undefined : message;
+  }
+}
 
 class SwellRejectionImpl extends Error {
   status: number;
@@ -59,7 +74,7 @@ class SwellResponseImpl extends Response {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(globalThis as any).SwellError = SwellError;
+(globalThis as any).SwellError = SwellErrorImpl;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).SwellRejection = SwellRejectionImpl;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

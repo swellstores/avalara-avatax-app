@@ -26,7 +26,6 @@ describe("getSettings", () => {
       account_id: "",
       license_key: "",
       company_code: "",
-      enabled: true,
       block_on_failure: false,
       product_tax_code: "P0000000",
       shipping_tax_code: "FR030000",
@@ -41,7 +40,6 @@ describe("getSettings", () => {
         account_id: " 1 ",
         license_key: " k ",
         company_code: " C ",
-        enabled: false,
         block_on_failure: true,
         product_tax_code: " pc040100 ",
         shipping_tax_code: "fr020100",
@@ -53,7 +51,6 @@ describe("getSettings", () => {
       account_id: "1",
       license_key: "k",
       company_code: "C",
-      enabled: false,
       block_on_failure: true,
       product_tax_code: "PC040100",
       shipping_tax_code: "FR020100",
@@ -72,9 +69,8 @@ describe("missingSettings / loadSettings", () => {
     expect(missingSettings(makeSettings())).toEqual([]);
   });
 
-  it("returns null when turned off or not set up", async () => {
+  it("returns null when not set up", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await loadSettings({ settings: async () => ({ avatax: { ...rawSettings, enabled: false } }) })).toBeNull();
     expect(await loadSettings({ settings: async () => ({ avatax: { ...rawSettings, license_key: "" } }) })).toBeNull();
     expect(await loadSettings({ settings: async () => ({ avatax: rawSettings }) })).toMatchObject({ company_code: "SWELL" });
   });

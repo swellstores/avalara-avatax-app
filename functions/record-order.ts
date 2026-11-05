@@ -1,5 +1,6 @@
 import { loadSettings } from './lib/avatax';
 import { SALE_FIELDS, salesModel, syncSale } from './lib/sales';
+import { isTaxService } from './lib/transactions';
 
 export const config: SwellConfig = {
   description: 'Record paid orders and invoices in AvaTax',
@@ -34,6 +35,8 @@ export default async function (req: SwellRequest) {
 
   const settings = await loadSettings(req.swell);
   if (!settings?.record_sales) return;
+  // after the merchant picks another tax service, orders are taxed by it, so they aren't recorded here
+  if (!(await isTaxService(req.swell))) return { outcome: 'not the tax service' };
 
   return { outcome: await syncSale(req.swell, settings, model, id) };
 }
