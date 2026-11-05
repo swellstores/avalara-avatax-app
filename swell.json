@@ -19,5 +19,30 @@
 	"integrations": [
 		"avatax"
 	],
-	"images": []
+	"images": [
+		{
+			"id": "settings",
+			"title": "Connect your AvaTax account",
+			"description": "Enter the account ID, license key and company code from AvaTax, then turn AvaTax on in Settings → Taxes.",
+			"image_src": "assets/screenshots/1-settings.png"
+		},
+		{
+			"id": "taxes",
+			"title": "Sales tax at checkout",
+			"description": "Taxes come from AvaTax for every cart and order, and paid orders are recorded in AvaTax for filing.",
+			"image_src": "assets/screenshots/2-taxes.png"
+		},
+		{
+			"id": "exemptions",
+			"title": "Tax-exempt customers",
+			"description": "Set an entity use code and exemption number on the customer; AvaTax exempts their orders where it applies.",
+			"image_src": "assets/screenshots/3-exemptions.png"
+		},
+		{
+			"id": "test-connection",
+			"title": "Check the connection",
+			"description": "Test connection checks the credentials and the company before you turn AvaTax on.",
+			"image_src": "assets/screenshots/4-test-connection.png"
+		}
+	]
 }

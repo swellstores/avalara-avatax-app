@@ -15,9 +15,10 @@ asks the app for taxes instead of using its own tax rules.
 Every call goes to the AvaTax REST API v2: `https://sandbox-rest.avatax.com/api/v2` or `https://rest.avatax.com/api/v2`,
 picked by the **Environment** setting (`avataxRequest` in `functions/lib/avatax.ts`). Requests use basic auth with the
 account ID and license key, and send `X-Avalara-Client: Swell; 1.0.0; REST; v2; Swell`, which names the app to
-Avalara's support (no partner connector id; AvaTax doesn't require one). Errors keep AvaTax's error code (for example `InvalidAddress`), the first detail's
-description, and the refused call (for example `POST /transactions/createoradjust`), and are logged with all three.
-A 2xx response that carries an `error` object is treated as an error with status 400.
+Avalara's support (no partner connector id; AvaTax doesn't require one). Errors keep AvaTax's error code (for example
+`InvalidAddress`), the first detail's description, and the refused call (for example
+`POST /transactions/createoradjust`), and are logged with all three. A 2xx response that carries an `error` object is
+treated as an error with status 400.
 
 ### Tax calculation
 
