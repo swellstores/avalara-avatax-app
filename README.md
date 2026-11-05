@@ -95,10 +95,10 @@ Addresses, per line:
 Any failure while calculating (AvaTax refuses the transaction, can't be reached, or a Swell call fails) is logged as
 `AvaTax: taxes not calculated: …`. Then:
 
-- **Reject when AvaTax fails** off (default): the hook returns no taxes, and the change is saved without tax.
-- **Reject when AvaTax fails** on: the hook rejects the change (`req.reject`, status 422, code `avatax_failed`) with
-  "Taxes could not be calculated. " followed by the reason, for example "AvaTax could not be reached. Try again in a few
-  minutes." The cart or order change isn't saved.
+- **Reject when AvaTax fails** off: the hook returns no taxes, and the change is saved without tax.
+- **Reject when AvaTax fails** on (default): the hook rejects the change (`req.reject`, status 422, code
+  `avatax_failed`) with "Taxes could not be calculated. " followed by the reason, for example "AvaTax could not be
+  reached. Try again in a few minutes." The cart or order change isn't saved.
 
 ### Recording sales
 
@@ -175,7 +175,7 @@ code.
 | License key | yes | | Generated on the same page. Stored as a secret. |
 | Company code | yes | | AvaTax → Settings → Manage companies. |
 | **Tax calculation** | | | |
-| Reject when AvaTax fails | no | off | Rejects the cart or order change when AvaTax can't calculate, instead of saving it without tax. |
+| Reject when AvaTax fails | no | on | Rejects the cart or order change when AvaTax can't calculate, instead of saving it without tax. |
 | Default product tax code | no | `P0000000` | For products without a tax code. |
 | Shipping tax code | no | `FR030000` | For shipping services without a tax code. |
 | **Recording sales** | | | |
@@ -209,8 +209,6 @@ Tax codes are trimmed and uppercased. **Actions**: **Test connection**.
   do.
 - **Unpaid orders aren't recorded.** An order is sent when it's paid; canceling it before then leaves nothing in AvaTax.
 - **Tax-exempt guests.** Guests can't have an entity use code; use certificates in Avalara keyed by their email.
-- **Orders created directly through the API** (not drafts, not converted from a cart) may be saved without a tax
-  calculation; drafts and carts converted to orders are calculated.
 - **Calls per calculation.** Each recalculation makes up to 5 Swell calls (app settings, locations, tax settings,
   customer, products) and one AvaTax call. Each recorded sale reloads the record and reads the tax settings once, for
   both the tax service check and the address setting.

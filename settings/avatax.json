@@ -67,7 +67,7 @@
           "label": "Reject when AvaTax fails",
           "type": "boolean",
           "ui": "toggle",
-          "default": false,
+          "default": true,
           "description": "When AvaTax can't calculate taxes, reject the cart or order change with an error instead of continuing without tax"
         },
         {

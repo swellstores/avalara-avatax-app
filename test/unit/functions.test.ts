@@ -137,16 +137,16 @@ describe("calculate-taxes", () => {
     expect(swell.get).not.toHaveBeenCalled();
   });
 
-  it("continues without tax when AvaTax fails", async () => {
+  it("continues without tax when AvaTax fails and rejecting is turned off", async () => {
     mockAvaTax({ transaction: fail(400, "InvalidAddress", "bad", "The zip code is not valid.") });
-    const { req } = request(hook());
+    const { req } = request(hook(), {}, { ...rawSettings, block_on_failure: false });
     expect(await calculateTaxes(req)).toBeUndefined();
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("The zip code is not valid."));
   });
 
-  it("rejects the change when AvaTax fails and the setting asks for it", async () => {
+  it("rejects the change when AvaTax fails (the default)", async () => {
     mockAvaTax({ transaction: fail(400, "InvalidAddress", "bad", "The zip code is not valid.") });
-    const { req } = request(hook(), {}, { ...rawSettings, block_on_failure: true });
+    const { req } = request(hook());
     await expect(calculateTaxes(req)).rejects.toMatchObject({
       name: "SwellRejection",
       status: 422,

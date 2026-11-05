@@ -77,7 +77,7 @@ export function getSettings(all: any): AvaTaxSettings {
     account_id: text(raw.account_id),
     license_key: text(raw.license_key),
     company_code: text(raw.company_code),
-    block_on_failure: flag(raw.block_on_failure, false),
+    block_on_failure: flag(raw.block_on_failure, true),
     product_tax_code: text(raw.product_tax_code).toUpperCase() || DEFAULT_PRODUCT_TAX_CODE,
     shipping_tax_code: text(raw.shipping_tax_code).toUpperCase() || DEFAULT_SHIPPING_TAX_CODE,
     record_sales: flag(raw.record_sales, true),
