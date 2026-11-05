@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json.swell.store/setting.json",
+  "label": "Avalara AvaTax",
+  "description": "Calculate sales tax with Avalara AvaTax at checkout and record paid orders in AvaTax for filing. In AvaTax, find the account ID and create a license key in Settings → License and API keys; the company code is in Settings → Manage companies. After saving, turn AvaTax on in Settings → Taxes.",
+  "actions": [
+    {
+      "id": "test_connection",
+      "label": "Test connection",
+      "function": "test-connection",
+      "loading_label": "Testing…",
+      "hint": "Checks the account ID, license key and company code"
+    }
+  ],
+  "fields": [
+    {
+      "id": "environment",
+      "label": "Environment",
+      "type": "select",
+      "default": "sandbox",
+      "options": [
+        {
+          "label": "Sandbox",
+          "value": "sandbox"
+        },
+        {
+          "label": "Production",
+          "value": "production"
+        }
+      ],
+      "description": "Sandbox accounts work only with Sandbox, production accounts only with Production"
+    },
+    {
+      "type": "field_row",
+      "fields": [
+        {
+          "id": "account_id",
+          "label": "Account ID",
+          "type": "short_text",
+          "required": true,
+          "admin_span": 2,
+          "description": "AvaTax → Settings → License and API keys"
+        },
+        {
+          "id": "license_key",
+          "label": "License key",
+          "type": "secret",
+          "required": true,
+          "admin_span": 2,
+          "description": "Generate one on the same page; generating a new key stops the old one"
+        }
+      ]
+    },
+    {
+      "id": "company_code",
+      "label": "Company code",
+      "type": "short_text",
+      "required": true,
+      "description": "AvaTax → Settings → Manage companies"
+    },
+    {
+      "id": "enabled",
+      "label": "Enabled",
+      "type": "boolean",
+      "ui": "toggle",
+      "default": true,
+      "description": "When off, the app calculates no taxes and records nothing in AvaTax. To use Swell's own tax rules instead, turn AvaTax off in Settings → Taxes."
+    },
+    {
+      "type": "field_group",
+      "label": "Tax calculation",
+      "description": "Taxes are calculated for carts, orders, subscriptions and invoices once the customer has entered an address with a zip code, or a street, city and state.",
+      "fields": [
+        {
+          "id": "block_on_failure",
+          "label": "Reject when AvaTax fails",
+          "type": "boolean",
+          "ui": "toggle",
+          "default": false,
+          "description": "When AvaTax can't calculate taxes, reject the cart or order change with an error instead of continuing without tax"
+        },
+        {
+          "type": "field_row",
+          "fields": [
+            {
+              "id": "product_tax_code",
+              "label": "Default product tax code",
+              "type": "short_text",
+              "default": "P0000000",
+              "admin_span": 2,
+              "description": "Used for products without a tax code (product → Tax code). P0000000 is taxable tangible goods."
+            },
+            {
+              "id": "shipping_tax_code",
+              "label": "Shipping tax code",
+              "type": "short_text",
+              "default": "FR030000",
+              "admin_span": 2,
+              "description": "Used for shipping services without a tax code of their own"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "field_group",
+      "label": "Recording sales",
+      "description": "Paid orders and invoices are saved in AvaTax as committed sales invoices, with the order number as the document code (invoices get I- in front). Changes and returns update the document; canceling the order voids it.",
+      "fields": [
+        {
+          "id": "record_sales",
+          "label": "Record paid orders in AvaTax",
+          "type": "boolean",
+          "ui": "toggle",
+          "default": true,
+          "description": "Needed for AvaTax returns and reports. Turn off if another system records the sales."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.swell.store/model.json",
+  "collection": "accounts",
+  "description": "The customer's AvaTax exemption, sent with every tax calculation and recorded sale",
+  "fields": {
+    "entity_use_code": {
+      "type": "string",
+      "description": "AvaTax entity use code, e.g. G for resale"
+    },
+    "exemption_number": {
+      "type": "string",
+      "description": "The customer's exemption certificate number"
+    }
+  },
+  "label": "Accounts"
+}

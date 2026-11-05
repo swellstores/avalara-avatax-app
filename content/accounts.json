@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json.swell.store/content.json",
+  "collection": "accounts",
+  "description": "AvaTax exemption on the customer page",
+  "fields": [
+    {
+      "id": "entity_use_code",
+      "label": "Entity use code",
+      "type": "select",
+      "description": "The customer's tax-exempt reason. AvaTax exempts the customer where this reason applies.",
+      "options": [
+        { "label": "None (taxable)", "value": "" },
+        { "label": "A – Federal government", "value": "A" },
+        { "label": "B – State government", "value": "B" },
+        { "label": "C – Tribe / status Indian / Indian band", "value": "C" },
+        { "label": "D – Foreign diplomat", "value": "D" },
+        { "label": "E – Charitable organization", "value": "E" },
+        { "label": "F – Religious organization", "value": "F" },
+        { "label": "G – Resale", "value": "G" },
+        { "label": "H – Agricultural production", "value": "H" },
+        { "label": "I – Industrial production / manufacturer", "value": "I" },
+        { "label": "J – Direct pay permit", "value": "J" },
+        { "label": "K – Direct mail", "value": "K" },
+        { "label": "L – Other", "value": "L" },
+        { "label": "M – Educational organization", "value": "M" },
+        { "label": "N – Local government", "value": "N" },
+        { "label": "P – Commercial aquaculture", "value": "P" },
+        { "label": "Q – Commercial fishery", "value": "Q" },
+        { "label": "R – Non-resident", "value": "R" }
+      ]
+    },
+    {
+      "id": "exemption_number",
+      "label": "Exemption number",
+      "type": "short_text",
+      "description": "Optional. The number of the customer's exemption certificate, recorded with each sale."
+    }
+  ],
+  "views": [
+    {
+      "id": "edit",
+      "tabs": [
+        {
+          "id": "avatax",
+          "label": "AvaTax",
+          "fields": [
+            {
+              "type": "field_row",
+              "fields": [
+                { "id": "entity_use_code", "admin_span": 2 },
+                { "id": "exemption_number", "admin_span": 2 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

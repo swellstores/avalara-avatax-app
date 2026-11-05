@@ -1,0 +1,1 @@
+{"root":["./setup-globals.ts","./helpers/avatax-fixtures.ts","./helpers/mock-request.ts","./unit/avatax.test.ts","./unit/functions.test.ts","./unit/transactions.test.ts","../functions/calculate-taxes.ts","../functions/record-order.ts","../functions/test-connection.ts","../functions/lib/avatax.ts","../functions/lib/sales.ts","../functions/lib/transactions.ts"],"version":"5.9.3"}

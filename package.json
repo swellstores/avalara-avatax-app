@@ -1,0 +1,17 @@
+{
+  "description": "Calculate sales tax with AvaTax and record paid orders for filing",
+  "devDependencies": {
+    "@swell/app-types": "^1.2.0",
+    "typescript": "^5.9.3",
+    "@cloudflare/vitest-plugin": "1.4.x",
+    "vitest": "5.0.x",
+    "@swell/apps-sdk": "^2.0.0-alpha.7"
+  },
+  "name": "avatax",
+  "private": true,
+  "scripts": {
+    "typecheck": "([ -z \"$(find functions -name '*.ts' 2>/dev/null | head -1)\" ] || tsc --noEmit) && ([ ! -f test/tsconfig.json ] || tsc --build --noEmit test) && ([ ! -f frontend/tsconfig.json ] || tsc --build --noEmit frontend)",
+    "test": "vitest run"
+  },
+  "version": "1.0.0"
+}

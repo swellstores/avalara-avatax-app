@@ -1,0 +1,23 @@
+{
+	"description": "Calculate sales tax with AvaTax and record paid orders for filing",
+	"id": "avatax",
+	"name": "Avalara AvaTax",
+	"type": "integration",
+	"version": "1.0.0",
+	"permissions": [],
+	"extensions": [
+		{
+			"id": "avatax",
+			"type": "tax",
+			"name": "Avalara AvaTax",
+			"description": "Real-time sales tax from Avalara AvaTax"
+		}
+	],
+	"support_email": "support@swell.is",
+	"price_external": true,
+	"repository_url": "https://github.com/swellstores/avalara-avatax-app",
+	"integrations": [
+		"avatax"
+	],
+	"images": []
+}
