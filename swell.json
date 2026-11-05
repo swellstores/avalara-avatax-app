@@ -14,6 +14,7 @@
 		}
 	],
 	"support_email": "support@swell.is",
+	"documentation_url": "https://developers.swell.is/app-guides/avalara-avatax",
 	"price_external": true,
 	"repository_url": "https://github.com/swellstores/avalara-avatax-app",
 	"integrations": [
