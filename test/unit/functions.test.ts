@@ -356,6 +356,12 @@ describe("test-connection", () => {
     expect(decodeURIComponent(companies.url)).toContain("$filter=companyCode eq 'SWELL'");
   });
 
+  it("doesn't add a second period after a company name that ends with one", async () => {
+    mockAvaTax({ companies: ok({ value: [{ companyCode: "SWELL", name: "Swell Inc.", isActive: true }] }) });
+    const { req } = request({});
+    expect(await testConnection(req)).toEqual({ message: "Connected to AvaTax (Sandbox), company Swell Inc." });
+  });
+
   it("says when recording sales is off", async () => {
     mockAvaTax();
     const { req } = request({}, {}, { ...rawSettings, record_sales: false });
@@ -365,9 +371,16 @@ describe("test-connection", () => {
 
   it("warns when Swell's built-in AvaTax integration is also connected", async () => {
     mockAvaTax();
-    const { req } = request({}, { integrations: { services: { avatax: { type: "tax", activated: true } } } });
+    const { req } = request({}, { integrations: { services: { avatax: { type: "tax", enabled: true } } } });
     const { message } = (await testConnection(req)) as any;
     expect(message).toContain("built-in Avalara AvaTax integration is also connected");
+  });
+
+  it("doesn't warn when the built-in AvaTax integration is set up but not enabled", async () => {
+    mockAvaTax();
+    const { req } = request({}, { integrations: { services: { avatax: { type: "tax", enabled: false, activated: true } } } });
+    const { message } = (await testConnection(req)) as any;
+    expect(message).toBe("Connected to AvaTax (Sandbox), company Swell Inc.");
   });
 
   it("asks for missing credentials without calling AvaTax", async () => {

@@ -44,7 +44,8 @@ export default async function (req: SwellRequest) {
     fail(`Connected to AvaTax (${environment}), but the company ${settings.company_code} is not active.`);
   }
 
-  const notes = [`Connected to AvaTax (${environment}), company ${company.name || settings.company_code}.`];
+  const companyName = String(company.name || settings.company_code);
+  const notes = [`Connected to AvaTax (${environment}), company ${companyName}${companyName.endsWith('.') ? '' : '.'}`];
   if (await builtInAvaTaxConnected(req)) {
     notes.push(
       "Swell's built-in Avalara AvaTax integration is also connected and records orders in AvaTax with the same document codes. Disconnect it in Settings → Integrations, so sales aren't overwritten or recorded twice.",
@@ -56,11 +57,11 @@ export default async function (req: SwellRequest) {
   return { message: notes.join(' ') };
 }
 
-// Swell's own AvaTax integration (Settings → Integrations) keeps recording orders while the app calculates taxes
+// Swell's own AvaTax integration (Settings → Integrations), when enabled, keeps recording orders while the app calculates taxes
 async function builtInAvaTaxConnected(req: SwellRequest): Promise<boolean> {
   try {
     const integrations = await req.swell.get('/settings/integrations');
-    return integrations?.services?.avatax?.activated === true;
+    return integrations?.services?.avatax?.enabled === true;
   } catch {
     // the warning is optional; the connection check above already passed
     return false;

@@ -161,7 +161,7 @@ email apply as well.
 The **Test connection** action calls `GET /utilities/ping` and checks `authenticated`, then looks up the company code
 (`GET /companies?$filter=companyCode eq '<code>'`) and checks it's active. It answers "Connected to AvaTax (Sandbox),
 company <name>." and notes when recording sales is off. When Swell's built-in Avalara AvaTax integration is also
-connected (`/settings/integrations` → `services.avatax.activated`), it warns to disconnect it in **Settings →
+connected (`/settings/integrations` → `services.avatax.enabled`), it warns to disconnect it in **Settings →
 Integrations**: that integration keeps recording orders with the same document codes, so it overwrites the app's
 documents (dropping exemptions) with the same company, or records each sale twice with another one. It works before AvaTax is selected in **Settings → Taxes** and
 sends no store data. Missing credentials, wrong credentials, an unknown or inactive company and AvaTax errors show as a
