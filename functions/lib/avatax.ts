@@ -14,6 +14,10 @@ export type Environment = keyof typeof API_HOSTS;
 // Sent in X-Avalara-Client as "app name; app version; adapter; adapter version; machine".
 export const CLIENT_HEADER = 'Swell; 1.0.0; REST; v2; Swell';
 
+// Swell waits 10 s for the tax hook, then saves the record without tax and ignores Reject when AvaTax fails.
+// AvaTax calls stop earlier, so the hook can still reject with an error.
+export const REQUEST_TIMEOUT_MS = 6000;
+
 // AvaTax tax codes used when a product or shipping service has none
 export const DEFAULT_PRODUCT_TAX_CODE = 'P0000000';
 export const DEFAULT_SHIPPING_TAX_CODE = 'FR030000';
@@ -128,17 +132,22 @@ export async function avataxRequest(
   if (body) headers['content-type'] = 'application/json';
 
   let res: Response;
+  let text: string;
   try {
     res = await fetch(`${API_HOSTS[settings.environment]}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
+    text = await res.text();
   } catch (err: any) {
+    if (err?.name === 'TimeoutError') {
+      throw new AvaTaxError(0, 'Timeout', `no answer in ${REQUEST_TIMEOUT_MS / 1000} s`, endpoint);
+    }
     throw new AvaTaxError(0, undefined, err?.message || String(err), endpoint);
   }
 
-  const text = await res.text();
   let json: any = null;
   if (text) {
     try {
@@ -162,6 +171,9 @@ export async function avataxRequest(
 export function connectionError(err: unknown): string {
   if (!(err instanceof AvaTaxError)) {
     return `AvaTax could not be reached: ${err instanceof Error ? err.message : String(err)}`;
+  }
+  if (err.code === 'Timeout') {
+    return `AvaTax didn't answer within ${REQUEST_TIMEOUT_MS / 1000} seconds. Try again in a few minutes.`;
   }
   if (err.status === 0) {
     return 'AvaTax could not be reached. Try again in a few minutes.';

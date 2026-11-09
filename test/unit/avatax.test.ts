@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   AvaTaxError,
   CLIENT_HEADER,
+  REQUEST_TIMEOUT_MS,
   avataxRequest,
   connectionError,
   getSettings,
@@ -111,6 +112,14 @@ describe("avataxRequest", () => {
     expect(err).toMatchObject({ status: 0, retryable: true });
   });
 
+  it("stops waiting for AvaTax after the timeout and reports it as a Timeout error", async () => {
+    const fetchMock = mockFetch(new DOMException("The operation was aborted due to timeout", "TimeoutError"));
+    const err = await avataxRequest(makeSettings(), "GET", "/utilities/ping").catch((e) => e);
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(err).toMatchObject({ name: "AvaTaxError", status: 0, code: "Timeout", retryable: true });
+    expect(REQUEST_TIMEOUT_MS).toBeLessThan(10000);
+  });
+
   it("treats 429 and 5xx as retryable", () => {
     expect(new AvaTaxError(429, undefined, "x").retryable).toBe(true);
     expect(new AvaTaxError(503, undefined, "x").retryable).toBe(true);
@@ -121,6 +130,9 @@ describe("avataxRequest", () => {
 describe("connectionError", () => {
   it("explains each kind of failure", () => {
     expect(connectionError(new AvaTaxError(0, undefined, "x"))).toContain("could not be reached");
+    expect(connectionError(new AvaTaxError(0, "Timeout", "x"))).toBe(
+      "AvaTax didn't answer within 6 seconds. Try again in a few minutes.",
+    );
     expect(connectionError(new AvaTaxError(401, "AuthenticationException", "x"))).toContain("account ID or license key");
     expect(connectionError(new AvaTaxError(403, undefined, "nope"))).toContain("refused");
     expect(connectionError(new AvaTaxError(429, undefined, "x"))).toContain("limiting requests");

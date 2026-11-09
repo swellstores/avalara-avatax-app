@@ -154,6 +154,19 @@ describe("calculate-taxes", () => {
     });
   });
 
+  it("rejects when AvaTax doesn't answer in time", async () => {
+    mockAvaTax({ transaction: new DOMException("The operation was aborted due to timeout", "TimeoutError") });
+    const { req } = request(hook());
+    await expect(calculateTaxes(req)).rejects.toMatchObject({
+      body: {
+        $reject: {
+          code: "avatax_failed",
+          message: "Taxes could not be calculated. AvaTax didn't answer within 6 seconds. Try again in a few minutes.",
+        },
+      },
+    });
+  });
+
   it("rejects when AvaTax can't be reached and the setting asks for it", async () => {
     mockAvaTax({ transaction: new TypeError("fetch failed") });
     const { req } = request(hook(), {}, { ...rawSettings, block_on_failure: true });
@@ -294,6 +307,14 @@ describe("record-order", () => {
     expect(model.lines[0].addresses.shipTo).toMatchObject({ postalCode: "78701" });
   });
 
+  it("doesn't record an invoice for an order, since the order is recorded", async () => {
+    const fetchMock = mockAvaTax();
+    const invoice = { id: INVOICE_ID, number: "78", paid: true, order_id: "order_1", items: [] };
+    const { req } = request(event("invoice.updated", { paid: true }, INVOICE_ID), { invoice });
+    expect(await recordOrder(req)).toEqual({ outcome: "order invoice" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("voids a voided invoice", async () => {
     const fetchMock = mockAvaTax();
     const invoice = { id: INVOICE_ID, number: "77", paid: true, void: true };
@@ -340,6 +361,13 @@ describe("test-connection", () => {
     const { req } = request({}, {}, { ...rawSettings, record_sales: false });
     const { message } = (await testConnection(req)) as any;
     expect(message).toContain("Recording sales is off");
+  });
+
+  it("warns when Swell's built-in AvaTax integration is also connected", async () => {
+    mockAvaTax();
+    const { req } = request({}, { integrations: { services: { avatax: { type: "tax", activated: true } } } });
+    const { message } = (await testConnection(req)) as any;
+    expect(message).toContain("built-in Avalara AvaTax integration is also connected");
   });
 
   it("asks for missing credentials without calling AvaTax", async () => {

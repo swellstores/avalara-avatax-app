@@ -160,6 +160,11 @@ describe("customer", () => {
     expect(exemption(makeAccount({ $app: { avatax: { entity_use_code: "" } } }))).toEqual({});
     expect(exemption(null)).toEqual({});
   });
+
+  it("doesn't send an exemption number without an entity use code, since AvaTax would exempt every sale", () => {
+    expect(exemption(makeAccount({ $app: { avatax: { exemption_number: "EX-1" } } }))).toEqual({});
+    expect(exemption(makeAccount({ $app: { avatax: { entity_use_code: "G" } } }))).toEqual({ entityUseCode: "G" });
+  });
 });
 
 describe("transaction", () => {

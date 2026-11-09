@@ -37,6 +37,7 @@ export type SaleOutcome =
   | 'not found'
   | 'not paid'
   | 'taxes fixed'
+  | 'order invoice'
   | 'no address'
   | 'failed';
 
@@ -70,6 +71,8 @@ export async function syncSale(
   });
   if (!record?.id) return 'not found';
   if (record.taxes_fixed) return 'taxes fixed';
+  // an invoice for an order bills the same sale, which is recorded with the order
+  if (model === 'invoices' && record.order_id) return 'order invoice';
 
   const code = transactionCode(record.number, model);
   if (!code) return 'not found';

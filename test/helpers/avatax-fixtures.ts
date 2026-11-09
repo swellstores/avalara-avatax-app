@@ -132,6 +132,7 @@ export function makeSwell(records: Record<string, any> = {}, settings: any = raw
     get: vi.fn(async (path: string, query?: any) => {
       if (path === "/settings/shipments/locations") return "locations" in records ? records.locations : locations;
       if (path === "/settings/taxes") return "taxes" in records ? records.taxes : taxSettings;
+      if (path === "/settings/integrations") return "integrations" in records ? records.integrations : null;
       if (path === "/products") {
         const ids: string[] = query?.where?.id?.$in || [];
         const products = "products" in records ? records.products : [makeProduct()];

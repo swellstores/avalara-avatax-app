@@ -45,8 +45,24 @@ export default async function (req: SwellRequest) {
   }
 
   const notes = [`Connected to AvaTax (${environment}), company ${company.name || settings.company_code}.`];
+  if (await builtInAvaTaxConnected(req)) {
+    notes.push(
+      "Swell's built-in Avalara AvaTax integration is also connected and records orders in AvaTax with the same document codes. Disconnect it in Settings → Integrations, so sales aren't overwritten or recorded twice.",
+    );
+  }
   if (!settings.record_sales) {
     notes.push('Recording sales is off, so paid orders are not sent to AvaTax for filing.');
   }
   return { message: notes.join(' ') };
+}
+
+// Swell's own AvaTax integration (Settings → Integrations) keeps recording orders while the app calculates taxes
+async function builtInAvaTaxConnected(req: SwellRequest): Promise<boolean> {
+  try {
+    const integrations = await req.swell.get('/settings/integrations');
+    return integrations?.services?.avatax?.activated === true;
+  } catch {
+    // the warning is optional; the connection check above already passed
+    return false;
+  }
 }

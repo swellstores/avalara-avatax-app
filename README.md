@@ -1,8 +1,8 @@
 # Avalara AvaTax integration
 
 A Swell tax app that calculates sales tax with [Avalara AvaTax](https://www.avalara.com/us/en/products/calculations.html)
-for carts, orders, subscriptions and invoices, and records paid orders and invoices in AvaTax as committed sales, so
-they appear in AvaTax reports and returns. Customers can be marked tax-exempt on their customer page. The app connects
+for carts, orders and subscriptions, and records paid orders and invoices in AvaTax as committed sales, so they appear
+in AvaTax reports and returns. Customers can be marked tax-exempt on their customer page. The app connects
 with an AvaTax **account ID** and **license key**.
 
 It is a tax extension (`extensions` in `swell.json`, id `avatax`): once it's turned on in **Settings → Taxes**, Swell
@@ -23,8 +23,8 @@ treated as an error with status 400.
 ### Tax calculation
 
 `functions/calculate-taxes.ts` is the extension's `before:order.taxes` hook. Swell runs it whenever it recalculates the
-taxes of a cart, order, subscription or invoice (items, quantities, addresses, coupons or promotions change, or the
-order is submitted). The hook gets
+taxes of a cart, order or subscription (items, quantities, addresses, coupons or promotions change, or the order is
+submitted). Invoices don't run it: Swell copies their taxes from the order or subscription. The hook gets
 the change being saved and the saved record (`$record`); the app combines them into the current record.
 
 It calculates nothing and returns no taxes when:
@@ -35,7 +35,7 @@ It calculates nothing and returns no taxes when:
 - neither the shipping nor the billing address has a zip code, or a street, city and state;
 - there are no items, no subscription plan item and no shipping service.
 
-Otherwise it loads the shipping locations (`/settings/shipments/locations`), the **Calculate taxes based on** setting
+Otherwise it loads the shipping locations (`/settings/shipments/locations`), the **Taxable location** setting
 (`/settings/taxes` → `location_source`), the customer (`/accounts/{id}`, for the email and exemption), and the products of
 items that don't have them (one `/products` call: name, SKU, type, delivery, tax code), then sends a `SalesOrder`
 transaction with `commit: false` to `POST /transactions/createoradjust`. AvaTax doesn't save `SalesOrder` documents.
@@ -48,7 +48,7 @@ The transaction has:
 | `companyCode` | the **Company code** setting |
 | `date` | today, `YYYY-MM-DD` |
 | `customerCode` | the customer's email, lowercased; else the account ID; else `guest` |
-| `entityUseCode`, `exemptionNo` | the customer's **Entity use code** and **Exemption number** (see Customer exemptions), when set |
+| `entityUseCode`, `exemptionNo` | the customer's **Entity use code**, and with it the **Exemption number** (see Customer exemptions) |
 | `currencyCode` | the record's currency |
 | `lines` | see Lines below |
 
@@ -81,8 +81,8 @@ the record's prices include tax: items, returns and the restocking fee when `ite
 
 Addresses, per line:
 
-- **Ship to**: the first of the shipping and billing address (billing first when **Settings → Taxes → Calculate taxes
-  based on** is the billing address) that has a zip code, or a street, city and state.
+- **Ship to**: the first of the shipping and billing address (billing first when **Settings → Taxes → Taxable location**
+  is the billing address) that has a zip code, or a street, city and state.
 - **Ship from**: the item's `shipment_location`, else the shipping location with id `default`. The shipping and
   restocking-fee lines ship from the items' shared location, or `default` when the items ship from different ones.
 - Sent as `shipFrom` + `shipTo`; as one `singleLocation` (the customer's address) when there's no ship-from address or
@@ -92,13 +92,18 @@ Addresses, per line:
 
 ### When AvaTax fails
 
-Any failure while calculating (AvaTax refuses the transaction, can't be reached, or a Swell call fails) is logged as
+Any failure while calculating (AvaTax refuses the transaction, can't be reached or doesn't answer within 6 seconds, or a
+Swell call fails) is logged as
 `AvaTax: taxes not calculated: …`. Then:
 
 - **Reject when AvaTax fails** off: the hook returns no taxes, and the change is saved without tax.
 - **Reject when AvaTax fails** on (default): the hook rejects the change (`req.reject`, status 422, code
   `avatax_failed`) with "Taxes could not be calculated. " followed by the reason, for example "AvaTax could not be
   reached. Try again in a few minutes." The cart or order change isn't saved.
+
+Every AvaTax call stops after 6 seconds (`REQUEST_TIMEOUT_MS` in `functions/lib/avatax.ts`) with "AvaTax didn't answer
+within 6 seconds. Try again in a few minutes." Swell waits 10 seconds for the hook; a hook that runs longer or crashes
+ends with the change saved without tax, and the reject setting can't apply, so the app must answer first.
 
 ### Recording sales
 
@@ -117,6 +122,7 @@ The order or invoice is loaded again (with `items.product` and `account`, and `s
 |---|---|
 | not found, or without a number | nothing |
 | `taxes_fixed` | nothing |
+| invoice with an `order_id` | nothing; it bills the same sale as its order, which is recorded |
 | canceled order (`canceled`) or voided invoice (`void`) | the AvaTax document is voided (`POST /companies/{company}/transactions/{code}/void?documentType=SalesInvoice`, `{ "code": "DocVoided" }`). A document AvaTax doesn't have (`EntityNotFoundError`) or that's already voided (`TransactionAlreadyCancelled`) counts as done. |
 | not paid | nothing; AvaTax gets the sale once it's paid |
 | paid | a `SalesInvoice` with `commit: true` is sent to `POST /transactions/createoradjust`, built like the calculation above, with `code` and `purchaseOrderNo` = the document code and `date` = the record's creation date |
@@ -142,17 +148,22 @@ Other AvaTax errors (for example a locked document AvaTax has already filed) are
 | Field | Sent as | Values |
 |---|---|---|
 | Entity use code | `entityUseCode` | None, or one of AvaTax's standard codes A–R (for example G resale, E charitable organization, A federal government) |
-| Exemption number | `exemptionNo` | optional certificate number |
+| Exemption number | `exemptionNo` | optional certificate number, sent only with an entity use code |
 
-Both are sent with every calculation and recorded sale of that customer. Guests have no customer page, so they're
-always taxable unless AvaTax has a certificate for their email: the customer code is the email in both calculation and
-recording, so exemption certificates saved in Avalara for that email apply too.
+They're sent with every calculation and recorded sale of that customer. AvaTax exempts the whole sale whenever
+`exemptionNo` is set, whatever the reason, so a number without an entity use code isn't sent (`exemption` in
+`functions/lib/transactions.ts`). Guest checkouts have customer records too, so a guest can be exempted the same way.
+The customer code is the email in both calculation and recording, so exemption certificates saved in Avalara for that
+email apply as well.
 
 ### Test connection
 
 The **Test connection** action calls `GET /utilities/ping` and checks `authenticated`, then looks up the company code
 (`GET /companies?$filter=companyCode eq '<code>'`) and checks it's active. It answers "Connected to AvaTax (Sandbox),
-company <name>." and notes when recording sales is off. It works before AvaTax is selected in **Settings → Taxes** and
+company <name>." and notes when recording sales is off. When Swell's built-in Avalara AvaTax integration is also
+connected (`/settings/integrations` → `services.avatax.activated`), it warns to disconnect it in **Settings →
+Integrations**: that integration keeps recording orders with the same document codes, so it overwrites the app's
+documents (dropping exemptions) with the same company, or records each sale twice with another one. It works before AvaTax is selected in **Settings → Taxes** and
 sends no store data. Missing credentials, wrong credentials, an unknown or inactive company and AvaTax errors show as a
 red error popup (a `SwellError` with status 400); only temporary errors say "try again".
 
@@ -193,7 +204,9 @@ Tax codes are trimmed and uppercased. **Actions**: **Test connection**.
 3. In Swell, open **Settings → Taxes**, turn on **Avalara AvaTax** and click **Save changes**. Only one tax service can be
    active; this replaces any other one. Until this step Swell doesn't call the app.
 4. Check the store's shipping locations: the location with id `default` (and any per-product locations) is the
-   ship-from address. Set product tax codes on products (product → **Tax code**) where the default isn't right.
+   ship-from address. Set product tax codes (`tax_code`) where the default isn't right, with **Edit products**, an
+   import or the API: Swell shows the product **Tax code** field only while one of its built-in tax integrations is
+   connected. Shipping service tax codes (`tax_code` in `/settings/shipments` → `services`) are set through the API.
 5. Add an address to a test cart: its taxes come from AvaTax. Pay a test order: it appears in AvaTax → **Transactions**
    with the order number as its code.
 
@@ -208,7 +221,6 @@ Tax codes are trimmed and uppercased. **Actions**: **Test connection**.
 - **Refunds without returns** don't change the AvaTax document; returned items (with a return price) and restocking fees
   do.
 - **Unpaid orders aren't recorded.** An order is sent when it's paid; canceling it before then leaves nothing in AvaTax.
-- **Tax-exempt guests.** Guests can't have an entity use code; use certificates in Avalara keyed by their email.
 - **Calls per calculation.** Each recalculation makes up to 5 Swell calls (app settings, locations, tax settings,
   customer, products) and one AvaTax call. Each recorded sale reloads the record and reads the tax settings once, for
   both the tax service check and the address setting.

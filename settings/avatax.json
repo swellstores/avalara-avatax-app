@@ -60,7 +60,7 @@
     {
       "type": "field_group",
       "label": "Tax calculation",
-      "description": "Taxes are calculated for carts, orders, subscriptions and invoices once the customer has entered an address with a zip code, or a street, city and state.",
+      "description": "Taxes are calculated for carts, orders and subscriptions once the customer has entered an address with a zip code, or a street, city and state. Invoices keep the taxes of their order or subscription.",
       "fields": [
         {
           "id": "block_on_failure",
@@ -79,7 +79,7 @@
               "type": "short_text",
               "default": "P0000000",
               "admin_span": 2,
-              "description": "Used for products without a tax code (product → Tax code). P0000000 is taxable tangible goods."
+              "description": "Used for products without a tax code. Set product codes (tax_code) with Edit products, an import or the API. P0000000 is taxable tangible goods."
             },
             {
               "id": "shipping_tax_code",

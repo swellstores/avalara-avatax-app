@@ -7,7 +7,7 @@
       "id": "entity_use_code",
       "label": "Entity use code",
       "type": "select",
-      "description": "The customer's tax-exempt reason. AvaTax exempts the customer where this reason applies.",
+      "description": "The customer's tax-exempt reason. AvaTax exempts the customer where this reason applies. Without it the customer is taxable.",
       "options": [
         { "label": "None (taxable)", "value": "" },
         { "label": "A – Federal government", "value": "A" },
@@ -33,7 +33,7 @@
       "id": "exemption_number",
       "label": "Exemption number",
       "type": "short_text",
-      "description": "Optional. The number of the customer's exemption certificate, recorded with each sale."
+      "description": "The number of the customer's exemption certificate, recorded with each sale. Used only with an entity use code."
     }
   ],
   "views": [

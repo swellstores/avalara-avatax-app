@@ -49,7 +49,7 @@ export interface AvaTaxLine {
 export interface TaxContext {
   // Swell shipping locations by id; "default" is the store's main location
   locations: Map<string, any>;
-  // Settings → Taxes → "Calculate taxes based on": shipping (default) or billing address
+  // Settings → Taxes → "Taxable location": shipping (default) or billing address
   locationSource: string | undefined;
   // the record's customer, with the app's exemption fields
   account: any;
@@ -252,15 +252,14 @@ export function customerCode(account: any, record: any): string {
   return record?.account_id ? String(record.account_id) : 'guest';
 }
 
-// the customer's exemption fields set on the customer page
+// the customer's exemption fields set on the customer page. AvaTax exempts the whole sale for any exemptionNo,
+// so the number is sent only together with an entity use code (the exemption reason).
 export function exemption(account: any): { entityUseCode?: string; exemptionNo?: string } {
   const values = account?.$app?.[APP_ID] || {};
   const entityUseCode = typeof values.entity_use_code === 'string' ? values.entity_use_code.trim() : '';
   const exemptionNo = typeof values.exemption_number === 'string' ? values.exemption_number.trim() : '';
-  return {
-    ...(entityUseCode ? { entityUseCode } : {}),
-    ...(exemptionNo ? { exemptionNo } : {}),
-  };
+  if (!entityUseCode) return {};
+  return { entityUseCode, ...(exemptionNo ? { exemptionNo } : {}) };
 }
 
 // AvaTax document code of a Swell record: the order number, with a prefix for other record types
