@@ -96,7 +96,7 @@
     {
       "type": "field_group",
       "label": "Recording sales",
-      "description": "Paid orders and invoices are saved in AvaTax as committed sales invoices, with the order number as the document code (invoices get I- in front). Changes and returns update the document; canceling the order voids it.",
+      "description": "Paid orders and invoices are saved in AvaTax as committed sales invoices, with the order number as the document code (invoices get I- in front). Invoices created from an order aren't saved again, since the order already is. Changes and returns update the document; canceling the order voids it.",
       "fields": [
         {
           "id": "record_sales",

@@ -313,8 +313,8 @@ export function transactionModel(
 }
 
 // create the transaction, or update the one with the same code
-export function createOrAdjust(settings: AvaTaxSettings, model: Record<string, any>): Promise<any> {
-  return avataxRequest(settings, 'POST', '/transactions/createoradjust', { createTransactionModel: model });
+export function createOrAdjust(settings: AvaTaxSettings, model: Record<string, any>, timeoutMs?: number): Promise<any> {
+  return avataxRequest(settings, 'POST', '/transactions/createoradjust', { createTransactionModel: model }, timeoutMs);
 }
 
 // void a recorded transaction; false when AvaTax has none with this code or it's already voided

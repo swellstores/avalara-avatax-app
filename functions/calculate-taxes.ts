@@ -1,4 +1,11 @@
-import { connectionError, loadSettings, AvaTaxError } from './lib/avatax';
+import {
+  AvaTaxError,
+  HOOK_DEADLINE_MS,
+  REQUEST_TIMEOUT_MS,
+  beforeDeadline,
+  connectionError,
+  loadSettings,
+} from './lib/avatax';
 import {
   TAX_ID,
   buildLines,
@@ -31,9 +38,10 @@ function currentRecord(data: Record<string, any>): Record<string, any> {
   return record;
 }
 
-// Runs whenever Swell recalculates taxes of a cart, order, subscription or invoice.
+// Runs whenever Swell recalculates taxes of a cart, order or subscription; invoices copy the taxes of theirs.
 // Returns nothing (no tax) when the app is not set up, or the customer has no address yet.
 export default async function (req: SwellRequest) {
+  const deadline = Date.now() + HOOK_DEADLINE_MS;
   const settings = await loadSettings(req.swell);
   if (!settings) return;
 
@@ -56,20 +64,21 @@ export default async function (req: SwellRequest) {
   if (!items.length && !record.shipping?.service) return;
 
   try {
-    const [locations, account, linesItems] = await Promise.all([
-      loadLocations(req.swell),
-      loadAccount(req.swell, record),
-      withProducts(req.swell, items),
-    ]);
+    const [locations, account, linesItems] = await beforeDeadline(
+      Promise.all([loadLocations(req.swell), loadAccount(req.swell, record), withProducts(req.swell, items)]),
+      deadline,
+      'loading the record from Swell',
+    );
     const context = { ...locations, account };
     const built = buildLines(record, linesItems, context, settings);
     const transaction = await createOrAdjust(
       settings,
       transactionModel(record, built.lines, context, settings, { code: undefined, date: documentDate(), record: false }),
+      Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()),
     );
     return taxResult(transaction, built, planItem !== undefined, items);
   } catch (err) {
-    console.error(`AvaTax: taxes not calculated: ${err instanceof AvaTaxError ? err.detail : String(err)}`);
+    console.error(`AvaTax: taxes not calculated: ${err instanceof AvaTaxError ? err.detail : err instanceof Error ? err.message : String(err)}`);
     if (settings.block_on_failure) {
       throw req.reject('avatax_failed', `Taxes could not be calculated. ${connectionError(err)}`, { status: 422 });
     }

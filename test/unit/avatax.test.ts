@@ -131,7 +131,7 @@ describe("connectionError", () => {
   it("explains each kind of failure", () => {
     expect(connectionError(new AvaTaxError(0, undefined, "x"))).toContain("could not be reached");
     expect(connectionError(new AvaTaxError(0, "Timeout", "x"))).toBe(
-      "AvaTax didn't answer within 6 seconds. Try again in a few minutes.",
+      "AvaTax didn't answer in time. Try again in a few minutes.",
     );
     expect(connectionError(new AvaTaxError(401, "AuthenticationException", "x"))).toContain("account ID or license key");
     expect(connectionError(new AvaTaxError(403, undefined, "nope"))).toContain("refused");

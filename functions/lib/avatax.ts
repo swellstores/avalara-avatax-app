@@ -12,10 +12,14 @@ export const API_HOSTS = {
 export type Environment = keyof typeof API_HOSTS;
 
 // Sent in X-Avalara-Client as "app name; app version; adapter; adapter version; machine".
-export const CLIENT_HEADER = 'Swell; 1.0.0; REST; v2; Swell';
+// Keep the version in step with swell.json.
+export const CLIENT_HEADER = 'Swell; 1.0.4; REST; v2; Swell';
 
-// Swell waits 10 s for the tax hook, then saves the record without tax and ignores Reject when AvaTax fails.
-// AvaTax calls stop earlier, so the hook can still reject with an error.
+// Swell waits 10 s for the tax hook, then saves the record without tax and ignores Reject.
+// The hook gives itself 8 s from its start, Swell reads included, so it can still reject with an error.
+export const HOOK_DEADLINE_MS = 8000;
+
+// An AvaTax call stops after 6 s, or sooner when the hook's deadline is closer
 export const REQUEST_TIMEOUT_MS = 6000;
 
 // AvaTax tax codes used when a product or shipping service has none
@@ -37,6 +41,23 @@ export interface AvaTaxSettings {
   product_tax_code: string;
   shipping_tax_code: string;
   record_sales: boolean;
+}
+
+// The tax hook ran out of time before AvaTax answered, e.g. while Swell was still loading the record's products
+export class DeadlineError extends Error {
+  constructor(step: string) {
+    super(`deadline passed ${step}`);
+    this.name = 'DeadlineError';
+  }
+}
+
+// Waits for the promise until the deadline (ms since epoch), then fails with DeadlineError
+export function beforeDeadline<T>(promise: Promise<T>, deadline: number, step: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new DeadlineError(step)), Math.max(0, deadline - Date.now()));
+  });
+  return Promise.race([promise, expired]).finally(() => clearTimeout(timer));
 }
 
 // Error returned by the AvaTax API (or a network failure when status is 0)
@@ -122,8 +143,10 @@ export async function avataxRequest(
   method: 'GET' | 'POST',
   path: string,
   body?: object,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<any> {
   const endpoint = `${method} ${path.split('?')[0]}`;
+  if (timeoutMs <= 0) throw new DeadlineError(`before ${endpoint}`);
   const headers: Record<string, string> = {
     accept: 'application/json',
     authorization: authorization(settings),
@@ -138,12 +161,12 @@ export async function avataxRequest(
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     text = await res.text();
   } catch (err: any) {
     if (err?.name === 'TimeoutError') {
-      throw new AvaTaxError(0, 'Timeout', `no answer in ${REQUEST_TIMEOUT_MS / 1000} s`, endpoint);
+      throw new AvaTaxError(0, 'Timeout', `no answer in ${(timeoutMs / 1000).toFixed(1)} s`, endpoint);
     }
     throw new AvaTaxError(0, undefined, err?.message || String(err), endpoint);
   }
@@ -169,11 +192,14 @@ export async function avataxRequest(
 
 // merchant-facing explanation of a failed AvaTax call
 export function connectionError(err: unknown): string {
+  if (err instanceof DeadlineError) {
+    return 'Calculating took too long. Try again in a few minutes.';
+  }
   if (!(err instanceof AvaTaxError)) {
     return `AvaTax could not be reached: ${err instanceof Error ? err.message : String(err)}`;
   }
   if (err.code === 'Timeout') {
-    return `AvaTax didn't answer within ${REQUEST_TIMEOUT_MS / 1000} seconds. Try again in a few minutes.`;
+    return "AvaTax didn't answer in time. Try again in a few minutes.";
   }
   if (err.status === 0) {
     return 'AvaTax could not be reached. Try again in a few minutes.';

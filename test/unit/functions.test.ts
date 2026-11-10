@@ -20,6 +20,7 @@ import {
 import calculateTaxes, { config as calculateConfig } from "../../functions/calculate-taxes";
 import recordOrder, { config as recordConfig, isSaleChange } from "../../functions/record-order";
 import testConnection, { config as testConfig } from "../../functions/test-connection";
+import { HOOK_DEADLINE_MS } from "../../functions/lib/avatax";
 
 let errorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -161,10 +162,47 @@ describe("calculate-taxes", () => {
       body: {
         $reject: {
           code: "avatax_failed",
-          message: "Taxes could not be calculated. AvaTax didn't answer within 6 seconds. Try again in a few minutes.",
+          message: "Taxes could not be calculated. AvaTax didn't answer in time. Try again in a few minutes.",
         },
       },
     });
+  });
+
+  it("rejects when loading the record from Swell runs past the hook's deadline, without calling AvaTax", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = mockAvaTax();
+      const { req, swell } = request(hook());
+      const load = swell.get.getMockImplementation()!;
+      swell.get.mockImplementation((path: string, query?: any) =>
+        path === "/products" ? new Promise(() => {}) : load(path, query));
+      const result = calculateTaxes(req).catch((err) => err);
+      await vi.advanceTimersByTimeAsync(HOOK_DEADLINE_MS);
+      expect(await result).toMatchObject({
+        body: { $reject: { message: "Taxes could not be calculated. Calculating took too long. Try again in a few minutes." } },
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("deadline passed loading the record from Swell"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives AvaTax only the time left before the hook's deadline", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    mockAvaTax();
+    const { req, swell } = request(hook());
+    const load = swell.get.getMockImplementation()!;
+    // Swell takes 3 s to load the products
+    swell.get.mockImplementation(async (path: string, query?: any) => {
+      if (path === "/products") vi.setSystemTime(Date.now() + 3000);
+      return load(path, query);
+    });
+    await calculateTaxes(req);
+    const [ms] = timeout.mock.calls.at(-1)!;
+    expect(ms).toBeLessThanOrEqual(HOOK_DEADLINE_MS - 3000);
+    expect(ms).toBeGreaterThan(HOOK_DEADLINE_MS - 3000 - 1000);
+    vi.useRealTimers();
   });
 
   it("rejects when AvaTax can't be reached and the setting asks for it", async () => {
@@ -374,6 +412,23 @@ describe("test-connection", () => {
     const { req } = request({}, { integrations: { services: { avatax: { type: "tax", enabled: true } } } });
     const { message } = (await testConnection(req)) as any;
     expect(message).toContain("built-in Avalara AvaTax integration is also connected");
+  });
+
+  it("treats any truthy enabled as connected, as Swell does", async () => {
+    mockAvaTax();
+    const { req } = request({}, { integrations: { services: { avatax: { enabled: "true" } } } });
+    const { message } = (await testConnection(req)) as any;
+    expect(message).toContain("Disconnect it in Integrations,");
+  });
+
+  it("leaves out the warning and logs it when the integrations can't be read", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockAvaTax();
+    const { req, swell } = request({});
+    swell.get.mockRejectedValueOnce(new Error("Swell is down"));
+    const { message } = (await testConnection(req)) as any;
+    expect(message).toBe("Connected to AvaTax (Sandbox), company Swell Inc.");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Swell is down"));
   });
 
   it("doesn't warn when the built-in AvaTax integration is set up but not enabled", async () => {
