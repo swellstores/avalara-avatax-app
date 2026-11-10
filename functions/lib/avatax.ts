@@ -12,8 +12,7 @@ export const API_HOSTS = {
 export type Environment = keyof typeof API_HOSTS;
 
 // Sent in X-Avalara-Client as "app name; app version; adapter; adapter version; machine".
-// Keep the version in step with swell.json.
-export const CLIENT_HEADER = 'Swell; 1.0.4; REST; v2; Swell';
+export const CLIENT_HEADER = 'Swell; 1.0.0; REST; v2; Swell';
 
 // Swell waits 10 s for the tax hook, then saves the record without tax and ignores Reject.
 // The hook gives itself 8 s from its start, Swell reads included, so it can still reject with an error.
