@@ -3,7 +3,7 @@
 	"id": "avatax",
 	"name": "Avalara AvaTax",
 	"type": "integration",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"permissions": [],
 	"extensions": [
 		{
