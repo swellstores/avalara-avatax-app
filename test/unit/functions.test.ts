@@ -205,6 +205,52 @@ describe("calculate-taxes", () => {
     vi.useRealTimers();
   });
 
+  it("rejects when reading the app settings runs past the hook's deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchMock = mockAvaTax();
+      const { req, swell } = request(hook());
+      swell.settings.mockReturnValue(new Promise(() => {}));
+      const result = calculateTaxes(req).catch((err) => err);
+      await vi.advanceTimersByTimeAsync(HOOK_DEADLINE_MS);
+      expect(await result).toMatchObject({
+        body: { $reject: { message: "Taxes could not be calculated. Calculating took too long. Try again in a few minutes." } },
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("deadline passed loading the app settings"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects when the app settings can't be read, as Reject is on by default", async () => {
+    mockAvaTax();
+    const { req, swell } = request(hook());
+    swell.settings.mockRejectedValue(new Error("settings unavailable"));
+    await expect(calculateTaxes(req)).rejects.toMatchObject({
+      body: { $reject: { code: "avatax_failed", message: expect.stringContaining("settings unavailable") } },
+    });
+  });
+
+  it("reports an AvaTax timeout shortened by slow Swell reads as the hook's deadline", async () => {
+    mockAvaTax({ transaction: new DOMException("The operation was aborted due to timeout", "TimeoutError") });
+    const { req, swell } = request(hook());
+    const load = swell.get.getMockImplementation()!;
+    // Swell takes 3 s to load the products, so AvaTax gets less than its full timeout
+    swell.get.mockImplementation(async (path: string, query?: any) => {
+      if (path === "/products") vi.setSystemTime(Date.now() + 3000);
+      return load(path, query);
+    });
+    try {
+      await expect(calculateTaxes(req)).rejects.toMatchObject({
+        body: { $reject: { message: "Taxes could not be calculated. Calculating took too long. Try again in a few minutes." } },
+      });
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("deadline passed waiting for AvaTax"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rejects when AvaTax can't be reached and the setting asks for it", async () => {
     mockAvaTax({ transaction: new TypeError("fetch failed") });
     const { req } = request(hook(), {}, { ...rawSettings, block_on_failure: true });

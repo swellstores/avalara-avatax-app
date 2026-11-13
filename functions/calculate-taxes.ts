@@ -1,9 +1,12 @@
 import {
   AvaTaxError,
+  type AvaTaxSettings,
+  DeadlineError,
   HOOK_DEADLINE_MS,
   REQUEST_TIMEOUT_MS,
   beforeDeadline,
   connectionError,
+  getSettings,
   loadSettings,
 } from './lib/avatax';
 import {
@@ -42,7 +45,14 @@ function currentRecord(data: Record<string, any>): Record<string, any> {
 // Returns nothing (no tax) when the app is not set up, or the customer has no address yet.
 export default async function (req: SwellRequest) {
   const deadline = Date.now() + HOOK_DEADLINE_MS;
-  const settings = await loadSettings(req.swell);
+  let settings: AvaTaxSettings | null;
+  try {
+    settings = await beforeDeadline(loadSettings(req.swell), deadline, 'loading the app settings');
+  } catch (err) {
+    // Without settings it's unknown whether Reject is on; follow its default (on),
+    // so a hung or failed read doesn't quietly save the change without tax.
+    return failed(req, err, getSettings(undefined).block_on_failure);
+  }
   if (!settings) return;
 
   const record = currentRecord(req.data);
@@ -71,19 +81,33 @@ export default async function (req: SwellRequest) {
     );
     const context = { ...locations, account };
     const built = buildLines(record, linesItems, context, settings);
+    const timeoutMs = Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now());
     const transaction = await createOrAdjust(
       settings,
       transactionModel(record, built.lines, context, settings, { code: undefined, date: documentDate(), record: false }),
-      Math.min(REQUEST_TIMEOUT_MS, deadline - Date.now()),
-    );
+      timeoutMs,
+    ).catch((err) => {
+      // When the Swell reads used up part of the time, AvaTax got less than REQUEST_TIMEOUT_MS.
+      // Its timeout then reports the hook's deadline ("Calculating took too long"), not AvaTax being slow.
+      if (timeoutMs < REQUEST_TIMEOUT_MS && err instanceof AvaTaxError && err.code === 'Timeout') {
+        throw new DeadlineError(`waiting for AvaTax (${err.detail})`);
+      }
+      throw err;
+    });
     return taxResult(transaction, built, planItem !== undefined, items);
   } catch (err) {
-    console.error(`AvaTax: taxes not calculated: ${err instanceof AvaTaxError ? err.detail : err instanceof Error ? err.message : String(err)}`);
-    if (settings.block_on_failure) {
-      throw req.reject('avatax_failed', `Taxes could not be calculated. ${connectionError(err)}`, { status: 422 });
-    }
-    return;
+    return failed(req, err, settings.block_on_failure);
   }
+}
+
+// Logs why taxes were not calculated, then rejects the change (reject = the Reject when AvaTax fails setting)
+// or returns no tax so the change is saved without it.
+function failed(req: SwellRequest, err: unknown, reject: boolean): undefined {
+  console.error(`AvaTax: taxes not calculated: ${err instanceof AvaTaxError ? err.detail : err instanceof Error ? err.message : String(err)}`);
+  if (reject) {
+    throw req.reject('avatax_failed', `Taxes could not be calculated. ${connectionError(err)}`, { status: 422 });
+  }
+  return undefined;
 }
 
 // AvaTax's response → item taxes, shipping tax and the order's AvaTax tax line

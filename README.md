@@ -105,10 +105,13 @@ Swell waits 10 seconds for the hook; a hook that runs longer or crashes ends wit
 reject setting can't apply, so the app must answer first. The hook gives itself 8 seconds from its start
 (`HOOK_DEADLINE_MS` in `functions/lib/avatax.ts`), Swell reads included:
 
-- Loading the locations, customer and products from Swell stops at the deadline with "Calculating took too long. Try
-  again in a few minutes."
-- The AvaTax call stops after 6 seconds (`REQUEST_TIMEOUT_MS`), or sooner when less time is left, with "AvaTax didn't
-  answer in time. Try again in a few minutes." With no time left, it isn't made and the first message applies.
+- Reading the app settings, then loading the locations, customer and products from Swell, stops at the deadline with
+  "Calculating took too long. Try again in a few minutes."
+- If the app settings can't be read at all, it's unknown whether **Reject when AvaTax fails** is on, so the hook
+  follows its default and rejects the change.
+- The AvaTax call stops after 6 seconds (`REQUEST_TIMEOUT_MS`) with "AvaTax didn't answer in time. Try again in a few
+  minutes." When the Swell reads left less than 6 seconds, it stops when the time runs out, with "Calculating took too
+  long", since AvaTax wasn't the only slow part. With no time left, it isn't made and the same message applies.
 
 Every other AvaTax call (Test connection, recording sales) stops after 6 seconds with the same message.
 
