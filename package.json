@@ -7,6 +7,7 @@
     "vitest": "5.0.x"
   },
   "name": "avatax",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "scripts": {
     "typecheck": "([ -z \"$(find functions -name '*.ts' 2>/dev/null | head -1)\" ] || tsc --noEmit) && ([ ! -f test/tsconfig.json ] || tsc --build --noEmit test) && ([ ! -f frontend/tsconfig.json ] || tsc --build --noEmit frontend)",
